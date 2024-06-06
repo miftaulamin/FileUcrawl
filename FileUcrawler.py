@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import urllib.parse
 import mimetypes
 import sys
+import re
 
 class FileUploadCrawler:
     def __init__(self, base_url):
@@ -19,16 +20,19 @@ class FileUploadCrawler:
             return
 
         visited.add(url)
+        print(f"Visiting: {url}")
 
         try:
             response = requests.get(url)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, 'html.parser')
                 forms = soup.find_all('form')
+                print(f"Found {len(forms)} forms on {url}")
 
                 for form in forms:
                     if form.find('input', {'type': 'file'}):
                         self.file_upload_pages.add(url)
+                        print(f"File upload form found on {url}")
                         break
 
                 links = soup.find_all('a', href=True)
@@ -91,11 +95,14 @@ def print_banner():
 ██╔══╝  ██║██║     ██╔══╝  ██║   ██║██║     ██╔══██╗██╔══██║██║███╗██║██║     
 ██║     ██║███████╗███████╗╚██████╔╝╚██████╗██║  ██║██║  ██║╚███╔███╔╝███████╗
 ╚═╝     ╚═╝╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝
-                                                                               
+                                                                                
                                            
   \033[92mTool by Miftaul Amin\033[0m
 """
     print(banner)
+
+def urljoin(base, url):
+    return urllib.parse.urljoin(base, url)
 
 if __name__ == "__main__":
     print_banner()
