@@ -90,10 +90,22 @@ class FileUploadFinder:
         else:
             print(f"No file input field found at {self.url}\n")
 
+def print_banner():
+    banner = """
+  ___         ___       __   __                 
+|__  | |    |__  |  | /  ` |__)  /\  |  | |    
+|    | |___ |___ \__/ \__, |  \ /~~\ |/\| |___ 
+                                                                                   
+  Tool by Miftaul Amin
+"""
+    print(banner)
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python FileUcrawler.py -l <websitelist.txt>")
         sys.exit(1)
+
+    print_banner()
 
     if sys.argv[1] == '-l':
         try:
