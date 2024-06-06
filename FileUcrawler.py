@@ -3,38 +3,51 @@ from bs4 import BeautifulSoup
 import sys
 
 class FileUploadFinder:
-    def __init__(self, urls):
-        self.urls = urls
+    def __init__(self, url):
+        self.url = url
 
     def find_file_upload(self):
-        for url in self.urls:
-            print(f"Scanning {url}...")
-            try:
-                response = requests.get(url)
-                response.raise_for_status()
-            except requests.exceptions.RequestException as e:
-                print(f"Error: {e}")
-                continue
+        response = requests.get(self.url)
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-            soup = BeautifulSoup(response.text, 'html.parser')
+        forms = soup.find_all('form')
 
-            forms = soup.find_all('form')
+        found = False
+        for form in forms:
+            inputs = form.find_all('input')
 
-            found = False
-            for form in forms:
-                inputs = form.find_all('input')
+            for input in inputs:
+                if input.get('type') == 'file':
+                    print(f"Found file upload form at {self.url}")
+                    found = True
+                    break
 
-                for input in inputs:
-                    if input.get('type') == 'file':
-                        print(f"Found file upload form at {url}")
-                        found = True
-                        break
-
-            if not found:
-                print(f"No file upload form found at {url}")
+        if not found:
+            print(f"No file upload form found at {self.url}")
 
     def run(self):
         self.find_file_upload()
+
+    def find_vulnerability(self):
+        response = requests.get(self.url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        input_field = soup.find('input', type='file')
+
+        if input_field:
+            mime_type = input_field.get('accept')
+            if mime_type:
+                if mime_type == 'application/pdf':
+                    print(f"Vulnerability found: File upload is only allowed for PDF files ({self.url})")
+                else:
+                    print(f"Vulnerability found: File upload is allowed for multiple MIME types ({self.url})")
+            else:
+                print(f"Vulnerability found: No MIME type restriction found ({self.url})")
+        else:
+            print(f"No file input field found ({self.url})")
+
+    def run_vulnerability(self):
+        self.find_vulnerability()
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -45,8 +58,14 @@ if __name__ == "__main__":
         try:
             with open(sys.argv[2], 'r') as f:
                 urls = [line.strip() for line in f.readlines()]
-            finder = FileUploadFinder(urls)
-            finder.run()
+            for url in urls:
+                finder = FileUploadFinder(url)
+                finder.run()
+
+                if finder.find_file_upload():
+                    finder.run_vulnerability()
+                else:
+                    print(f"No file upload form found at {url}")
             print("\n\n**FileUcrawler**")
             print("Status: Completed")
         except FileNotFoundError:
