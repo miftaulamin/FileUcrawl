@@ -37,7 +37,6 @@ class FileUploadFinder:
 
     def find_file_upload(self):
         try:
-            print(f"Accessing URL: {self.url}")
             response = urllib.request.urlopen(self.url)
             content_type = response.headers.get('Content-Type')
             encoding = 'utf-8'
@@ -58,17 +57,17 @@ class FileUploadFinder:
         file_upload_pages = [urljoin(self.url, page) for page in parser.get_file_upload_pages()]
 
         if not file_upload_pages:
-            print(f"No file upload form found at {self.url}")
+            print(f"No file upload form found at {self.url}\n")
         else:
-            print(f"File upload found at the following pages:")
+            print(f"\033[93mFile upload found at the following pages for {self.url}:\033[0m")
             for page in file_upload_pages:
-                print(page)
+                print(f"  - {page}")
+            print()
 
         return file_upload_pages
 
     def find_vulnerability(self):
         try:
-            print(f"Checking URL for vulnerabilities: {self.url}")
             response = urllib.request.urlopen(self.url)
             content_type = response.headers.get('Content-Type')
             encoding = 'utf-8'
@@ -87,9 +86,9 @@ class FileUploadFinder:
         parser = FormParser()
         parser.feed(page_content)
         if parser.file_upload_found:
-            print(f"Potential vulnerability found: File upload functionality exists at {self.url}")
+            print(f"\033[91mPotential vulnerability found: File upload functionality exists at {self.url}\033[0m\n")
         else:
-            print(f"No file input field found ({self.url})")
+            print(f"No file input field found at {self.url}\n")
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -102,15 +101,16 @@ if __name__ == "__main__":
                 urls = [line.strip() for line in f.readlines()]
 
             for url in urls:
+                print(f"Checking website: {url}")
                 finder = FileUploadFinder(url)
                 file_upload_pages = finder.find_file_upload()
 
                 if file_upload_pages:
                     finder.find_vulnerability()
                 else:
-                    print(f"No file upload form found at {url}")
+                    print(f"No file upload form found at {url}\n")
 
-            print("\n\n**FileUcrawler**")
+            print("\n**FileUcrawler**")
             print("Status: Completed")
         except FileNotFoundError:
             print("Error: The file specified does not exist.")
