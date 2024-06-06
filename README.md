@@ -11,5 +11,7 @@
 Example:  python3 FileUcrawler.py -l websitelist.txt -o result.txt
 
 Flag	Description:
+
 -l   List of targets (one per line)
+
 -o   Output directory
