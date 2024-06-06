@@ -9,13 +9,17 @@ class FileUploadFinder:
     def find_file_upload(self):
         for url in self.urls:
             print(f"Scanning {url}...")
-            response = requests.get(url)
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+            except requests.exceptions.RequestException as e:
+                print(f"Error: {e}")
+                continue
+
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Find all the forms on the page
             forms = soup.find_all('form')
 
-            # Iterate over the forms and check if they have a file input field
             found = False
             for form in forms:
                 inputs = form.find_all('input')
