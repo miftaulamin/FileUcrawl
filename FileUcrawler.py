@@ -98,3 +98,57 @@ if __name__ == "__main__":
     if sys.argv[1] != '-l':
         print("Error: Invalid flag. Please use -l <websitelist.txt>")
         sys.exit
+
+    try:
+        with open(sys.argv[2], 'r') as f:
+            urls = [line.strip() for line in f.readlines()]
+
+        found_urls = []
+        vulnerable_urls = []
+
+            with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = []
+        for url in urls:
+            if not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            print(f"\n\033[94mChecking website: {url}\033[0m")
+            crawler = FileUploadFinder(url)
+            futures.append(executor.submit(crawler.find_file_upload))
+
+        for future in futures:
+            future.result()
+
+    for url in urls:
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        print(f"\n\033[94mChecking website: {url}\033[0m")
+        crawler = FileUploadFinder(url)
+        crawler.scan_known_upload_paths()
+
+        file_upload_pages = crawler.file_upload_pages
+        if file_upload_pages:
+            found_urls.append(url)
+            print(f"\033[93mFile upload found at the following pages for {url}:\033[0m")
+            for page in file_upload_pages:
+                print(f"  - {page}")
+                tester = FileUploadTester(page)
+                if tester.test_file_upload(page):
+                    vulnerable_urls.append(url)
+        else:
+            print(f"No file upload form found at {url}\n")
+
+    if output_file:
+        with open(output_file, 'w') as f:
+            f.write("Websites with file uploading found:\n")
+            for url in found_urls:
+                f.write(f"{url}\n")
+            f.write("\nWebsites with potential vulnerabilities found:\n")
+            for url in vulnerable_urls:
+                f.write(f"{url}\n")
+
+    print("\n\033[92m**FileUcrawler** by Miftaul Amin\033[0m")
+    print("Status: Completed")
+except FileNotFoundError:
+    print("Error: The file specified does not exist.")
+    sys.exit(1)
+
