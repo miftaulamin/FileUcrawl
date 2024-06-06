@@ -3,12 +3,19 @@ from bs4 import BeautifulSoup
 import urllib.parse
 import mimetypes
 import sys
-import re
 
 class FileUploadCrawler:
     def __init__(self, base_url):
         self.base_url = base_url
         self.file_upload_pages = set()
+        self.known_upload_paths = [
+            'upload', 'file-upload', 'upload.php', 'fileupload', 'fileupload.php', 'prob_upload.php', 'WaitUpload.aspx',
+            'uploads', 'fileuploads', 'uploadfile', 'uploadfile.php', 'file_upload', 'file_upload.php', 'uploads.php',
+            'userupload', 'userupload.php', 'media/upload', 'media/fileupload', 'media/fileupload.php', 'documents/upload',
+            'documents/fileupload', 'files/upload', 'files/fileupload', 'files/file_upload', 'file-management/upload',
+            'file-management/fileupload', 'attachments/upload', 'attachments/fileupload', 'data/upload', 'data/fileupload',
+            'submit/upload', 'submit/fileupload', 'uploads.asp', 'uploads.aspx', 'uploads.cgi', 'upload.cgi'
+        ]
 
     def crawl_and_scan(self, url=None, visited=None):
         if url is None:
@@ -42,6 +49,22 @@ class FileUploadCrawler:
                         self.crawl_and_scan(href, visited)
         except Exception as e:
             print(f"Error accessing {url}: {e}")
+
+    def scan_known_upload_paths(self):
+        for path in self.known_upload_paths:
+            full_url = urllib.parse.urljoin(self.base_url, path)
+            print(f"Checking known upload path: {full_url}")
+            try:
+                response = requests.get(full_url)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    forms = soup.find_all('form')
+                    for form in forms:
+                        if form.find('input', {'type': 'file'}):
+                            self.file_upload_pages.add(full_url)
+                            print(f"File upload form found on known path: {full_url}")
+            except Exception as e:
+                print(f"Error accessing {full_url}: {e}")
 
     def get_file_upload_pages(self):
         return self.file_upload_pages
@@ -95,14 +118,11 @@ def print_banner():
 ██╔══╝  ██║██║     ██╔══╝  ██║   ██║██║     ██╔══██╗██╔══██║██║███╗██║██║     
 ██║     ██║███████╗███████╗╚██████╔╝╚██████╗██║  ██║██║  ██║╚███╔███╔╝███████╗
 ╚═╝     ╚═╝╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝
-                                                                                
+                                                                               
                                            
   \033[92mTool by Miftaul Amin\033[0m
 """
     print(banner)
-
-def urljoin(base, url):
-    return urllib.parse.urljoin(base, url)
 
 if __name__ == "__main__":
     print_banner()
@@ -131,6 +151,7 @@ if __name__ == "__main__":
                 print(f"Checking website: {url}")
                 crawler = FileUploadCrawler(url)
                 crawler.crawl_and_scan()
+                crawler.scan_known_upload_paths()
 
                 file_upload_pages = crawler.get_file_upload_pages()
                 if file_upload_pages:
