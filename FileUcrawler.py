@@ -92,25 +92,42 @@ class FileUploadFinder:
 
 def print_banner():
     banner = """
-  ___         ___       __   __                 
-|__  | |    |__  |  | /  ` |__)  /\  |  | |    
-|    | |___ |___ \__/ \__, |  \ /~~\ |/\| |___ 
-                                                                                   
-  Tool by Miftaul Amin
+ ███████████  ███  ████           █████  █████                                              ████ 
+░░███░░░░░░█ ░░░  ░░███          ░░███  ░░███                                              ░░███ 
+ ░███   █ ░  ████  ░███   ██████  ░███   ░███   ██████  ████████   ██████   █████ ███ █████ ░███ 
+ ░███████   ░░███  ░███  ███░░███ ░███   ░███  ███░░███░░███░░███ ░░░░░███ ░░███ ░███░░███  ░███ 
+ ░███░░░█    ░███  ░███ ░███████  ░███   ░███ ░███ ░░░  ░███ ░░░   ███████  ░███ ░███ ░███  ░███ 
+ ░███  ░     ░███  ░███ ░███░░░   ░███   ░███ ░███  ███ ░███      ███░░███  ░░███████████   ░███ 
+ █████       █████ █████░░██████  ░░████████  ░░██████  █████    ░░████████  ░░████░████    █████
+░░░░░       ░░░░░ ░░░░░  ░░░░░░    ░░░░░░░░    ░░░░░░  ░░░░░      ░░░░░░░░    ░░░░ ░░░░    ░░░░░ 
+                                                                                                 
+                                                                                                 
+                                                                                                 
+                                           
+  \033[92mTool by Miftaul Amin\033[0m
 """
     print(banner)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python FileUcrawler.py -l <websitelist.txt>")
+    if len(sys.argv) < 3 or len(sys.argv) > 5:
+        print("Usage: python FileUcrawler.py -l <websitelist.txt> [-o <outputfile.txt>]")
         sys.exit(1)
 
     print_banner()
+
+    output_file = None
+    if '-o' in sys.argv:
+        output_index = sys.argv.index('-o')
+        output_file = sys.argv[output_index + 1]
+        sys.argv = sys.argv[:output_index] + sys.argv[output_index + 2:]
 
     if sys.argv[1] == '-l':
         try:
             with open(sys.argv[2], 'r') as f:
                 urls = [line.strip() for line in f.readlines()]
+
+            found_urls = []
+            vulnerable_urls = []
 
             for url in urls:
                 print(f"Checking website: {url}")
@@ -118,9 +135,21 @@ if __name__ == "__main__":
                 file_upload_pages = finder.find_file_upload()
 
                 if file_upload_pages:
+                    found_urls.append(url)
                     finder.find_vulnerability()
+                    if finder.find_vulnerability():
+                        vulnerable_urls.append(url)
                 else:
                     print(f"No file upload form found at {url}\n")
+
+            if output_file:
+                with open(output_file, 'w') as f:
+                    f.write("Websites with file uploading found:\n")
+                    for url in found_urls:
+                        f.write(f"{url}\n")
+                    f.write("\nWebsites with potential vulnerabilities found:\n")
+                    for url in vulnerable_urls:
+                        f.write(f"{url}\n")
 
             print("\n**FileUcrawler**")
             print("Status: Completed")
