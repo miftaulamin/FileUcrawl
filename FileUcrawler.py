@@ -48,6 +48,8 @@ class FileUploadFinder:
             return []
 
         self.visited_urls.add(url)
+        if not urlparse(url).scheme:
+            url = 'https://' + url
         page_content = self.fetch_page(url)
         if not page_content:
             return []
