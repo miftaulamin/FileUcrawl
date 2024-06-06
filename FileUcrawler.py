@@ -97,32 +97,18 @@ class FileUploadTester:
         return False
 
 def print_banner():
-    print("""
-    ███████╗██╗██╗     ███████╗██╗   ██╗ ██████╗██████╗  █████╗ ██╗    ██╗██╗
-    ██╔════╝██║██║     ██╔════╝██║   ██║██╔════╝██╔══██╗██╔══██╗██║    ██║██║
-    █████╗  ██║██║     █████╗  ██║   ██║██║     ██████╔╝███████║██║ █╗ ██║██║
-    ██╔══╝  ██║██║     ██╔══╝  ██║   ██║██║     ██╔══██╗██╔══██║██║███╗██║██║
-    ██║     ██║███████╗███████╗╚██████╔╝╚██████╗██║  ██║██║  ██║╚███╔███╔╝███████╗
-    ╚═╝    ╗     ╚═╝
-    print(f"  - {page}")
-    tester = FileUploadTester(page)
-    if tester.test_file_upload(page):
-        print(f"\033[91mVulnerability found on {page}\033[0m")
-        vulnerable_urls.append(url)
-    else:
-        print(f"No file upload form found at {url}\n")
-
-if output_file:
-    with open(output_file, 'w') as f:
-        f.write("Websites with file uploading found:\n")
-        for url in found_urls:
-            f.write(f"{url}\n")
-        f.write("\nWebsites with potential vulnerabilities found:\n")
-        for url in vulnerable_urls:
-            f.write(f"{url}\n")
-
-print("\n\033[92m**FileUcrawler** by Miftaul Amin\033[0m")
-print("Status: Completed")
+    banner = """
+███████╗██╗██╗     ███████╗██╗   ██╗ ██████╗██████╗  █████╗ ██╗    ██╗██╗     
+██╔════╝██║██║     ██╔════╝██║   ██║██╔════╝██╔══██╗██╔══██╗██║    ██║██║     
+█████╗  ██║██║     █████╗  ██║   ██║██║     ██████╔╝███████║██║ █╗ ██║██║     
+██╔══╝  ██║██║     ██╔══╝  ██║   ██║██║     ██╔══██╗██╔══██║██║███╗██║██║     
+██║     ██║███████╗███████╗╚██████╔╝╚██████╗██║  ██║██║  ██║╚███╔███╔╝███████╗
+╚═╝     ╚═╝╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝
+                                                                              
+                                           
+  \033[92mTool by Miftaul Amin\033[0m
+"""
+    print(banner)
 
 if __name__ == "__main__":
     print_banner()
@@ -135,7 +121,7 @@ if __name__ == "__main__":
     if '-o' in sys.argv:
         output_index = sys.argv.index('-o')
         output_file = sys.argv[output_index + 1]
-        sys.argv = sys.argv[:output_index] + sys.argv[output_index + 2:]
+        sys.argv = sys.argv[:output_index] +sys.argv = sys.argv[:output_index] + sys.argv[output_index + 2:]
 
     if sys.argv[1] == '-l':
         try:
