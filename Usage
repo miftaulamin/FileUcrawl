@@ -1,0 +1,15 @@
+
+Install the required packages: You'll need to install the python3 package, which is the default Python interpreter in Kali Linux. You can install it by running the following command:
+
+
+1. sudo apt-get install python3
+Create a new Python script: Create a new file with a .py extension, for example, file_upload_finder.py. Copy the code I provided earlier and paste it into the file.
+Make the script executable: To make the script executable, run the following command:
+
+
+2. chmod +x main-code.py
+Run the script: To run the script, navigate to the directory where you saved the file and run the following command:
+
+
+./main-code.py
+This will execute the script and start searching for file upload forms on the specified URL.
