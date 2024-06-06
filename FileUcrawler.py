@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import sys
+from requests_html import HTMLSession
 
 class FormParser:
     def __init__(self):
@@ -33,10 +34,11 @@ class FileUploadFinder:
         self.max_depth = max_depth
 
     def fetch_page(self, url):
+        session = HTMLSession()
         try:
-            response = requests.get(url)
-            response.raise_for_status()
-            return response.text
+            response = session.get(url, verify=False)
+            response.html.render()  # Render JavaScript
+            return response.html.html
         except requests.RequestException as e:
             print(f"Error accessing {url}: {e}")
             return None
@@ -94,7 +96,7 @@ class FileUploadFinder:
         for filename, content in files_to_test.items():
             files = {'file': (filename, content)}
             try:
-                response = requests.post(form_action, files=files)
+                response = requests.post(form_action, files=files, verify=False)
                 if "Shell" in response.text:
                     print(f"\033[91mVulnerability found: {filename} uploaded and executed on {form_action}\033[0m\n")
                     return True
