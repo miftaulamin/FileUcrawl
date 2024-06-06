@@ -7,7 +7,6 @@ class FormParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.in_form = False
-        self.in_input = False
         self.current_form_action = None
         self.file_upload_found = False
         self.file_upload_pages = []
@@ -22,7 +21,8 @@ class FormParser(HTMLParser):
             input_type = attrs_dict.get('type', '')
             if input_type == 'file':
                 self.file_upload_found = True
-                self.file_upload_pages.append(self.current_form_action)
+                if self.current_form_action:
+                    self.file_upload_pages.append(self.current_form_action)
 
     def handle_endtag(self, tag):
         if tag == 'form':
@@ -37,10 +37,20 @@ class FileUploadFinder:
 
     def find_file_upload(self):
         try:
+            print(f"Accessing URL: {self.url}")
             response = urllib.request.urlopen(self.url)
-            page_content = response.read().decode('utf-8')
+            content_type = response.headers.get('Content-Type')
+            encoding = 'utf-8'
+            
+            if content_type and 'charset=' in content_type:
+                encoding = content_type.split('charset=')[-1]
+
+            page_content = response.read().decode(encoding, errors='ignore')
         except urllib.error.URLError as e:
             print(f"Error accessing {self.url}: {e}")
+            return []
+        except Exception as e:
+            print(f"Unexpected error: {e}")
             return []
 
         parser = FormParser()
@@ -58,10 +68,20 @@ class FileUploadFinder:
 
     def find_vulnerability(self):
         try:
+            print(f"Checking URL for vulnerabilities: {self.url}")
             response = urllib.request.urlopen(self.url)
-            page_content = response.read().decode('utf-8')
+            content_type = response.headers.get('Content-Type')
+            encoding = 'utf-8'
+            
+            if content_type and 'charset=' in content_type:
+                encoding = content_type.split('charset=')[-1]
+
+            page_content = response.read().decode(encoding, errors='ignore')
         except urllib.error.URLError as e:
             print(f"Error accessing {self.url}: {e}")
+            return
+        except Exception as e:
+            print(f"Unexpected error: {e}")
             return
 
         parser = FormParser()
