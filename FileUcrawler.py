@@ -27,19 +27,16 @@ class FileUploadCrawler:
             return
 
         visited.add(url)
-        print(f"Visiting: {url}")
 
         try:
             response = requests.get(url)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.content, 'html.parser')
                 forms = soup.find_all('form')
-                print(f"Found {len(forms)} forms on {url}")
 
                 for form in forms:
                     if form.find('input', {'type': 'file'}):
                         self.file_upload_pages.add(url)
-                        print(f"File upload form found on {url}")
                         break
 
                 links = soup.find_all('a', href=True)
@@ -48,12 +45,12 @@ class FileUploadCrawler:
                     if href.startswith(self.base_url):
                         self.crawl_and_scan(href, visited)
         except Exception as e:
-            print(f"Error accessing {url}: {e}")
+            pass
 
     def scan_known_upload_paths(self):
         for path in self.known_upload_paths:
             full_url = urllib.parse.urljoin(self.base_url, path)
-            print(f"Checking known upload path: {full_url}")
+
             try:
                 response = requests.get(full_url)
                 if response.status_code == 200:
@@ -62,9 +59,8 @@ class FileUploadCrawler:
                     for form in forms:
                         if form.find('input', {'type': 'file'}):
                             self.file_upload_pages.add(full_url)
-                            print(f"File upload form found on known path: {full_url}")
             except Exception as e:
-                print(f"Error accessing {full_url}: {e}")
+                pass
 
     def get_file_upload_pages(self):
         return self.file_upload_pages
@@ -103,10 +99,9 @@ class FileUploadTester:
             try:
                 response = requests.post(form_action, data=data, headers=headers)
                 if "Shell" in response.text:
-                    print(f"\033[91mVulnerability found: {filename} uploaded and executed on {self.url}\033[0m")
                     return True
             except Exception as e:
-                print(f"Error during file upload test: {e}")
+                pass
 
         return False
 
@@ -148,7 +143,7 @@ if __name__ == "__main__":
             for url in urls:
                 if not url.startswith(("http://", "https://")):
                     url = "https://" + url
-                print(f"Checking website: {url}")
+                print(f"\n\033[94mChecking website: {url}\033[0m")
                 crawler = FileUploadCrawler(url)
                 crawler.crawl_and_scan()
                 crawler.scan_known_upload_paths()
@@ -161,6 +156,7 @@ if __name__ == "__main__":
                         print(f"  - {page}")
                         tester = FileUploadTester(page)
                         if tester.test_file_upload(page):
+                            print(f"\033[91mVulnerability found on {page}\033[0m")
                             vulnerable_urls.append(url)
                 else:
                     print(f"No file upload form found at {url}\n")
@@ -174,7 +170,7 @@ if __name__ == "__main__":
                     for url in vulnerable_urls:
                         f.write(f"{url}\n")
 
-            print("\n**FileUcrawler**")
+            print("\n\033[92m**FileUcrawler**\033[0m")
             print("Status: Completed")
         except FileNotFoundError:
             print("Error: The file specified does not exist.")
