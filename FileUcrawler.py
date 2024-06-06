@@ -105,7 +105,6 @@ def print_banner():
 ██║     ██║███████╗███████╗╚██████╔╝╚██████╗██║  ██║██║  ██║╚███╔███╔╝███████╗
 ╚═╝     ╚═╝╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝
                                                                               
-                                           
   \033[92mTool by Miftaul Amin\033[0m
 """
     print(banner)
@@ -122,7 +121,7 @@ if __name__ == "__main__":
         output_index = sys.argv.index('-o')
         output_file = sys.argv[output_index + 1]
         del sys.argv[output_index]
-        del sys.argv[outputdel sys.argv[output_index + 1]
+               del sys.argv[output_index + 1]
 
     if sys.argv[1] == '-l':
         try:
