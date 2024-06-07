@@ -1,19 +1,17 @@
-💿 Installation
 
-◾git clone https://github.com/miftaulamin/FileUcrawl.git
+  - [Flags](#flags)
+    - `-l`     Stands for list of target(One Per Line)
+    - `--url`  Stands for single target
+    - `-O`     Stands for Output Directory
+  
 
-◾cd FileUcrawl
+# Installation And Usage
 
-◾chmod +x FileUcrawler.py
+- git clone https://github.com/miftaulamin/FileUcrawl.git
+- cd FileUcrawl
+- chmod +x FileUcrawler.py
+- python3 FileUcrawler.py -l [website list.txt]
 
-◾python3 FileUcrawler.py -l [website list.txt]
+  Example:  python3 FileUcrawler.py -l websitelist.txt -o result.txt
 
-Example:  python3 FileUcrawler.py -l websitelist.txt -o result.txt
 
-Flag	Description:
-
--l   List of targets (one per line)
-
--o   Output directory
-
---url  Target Url(one website)
