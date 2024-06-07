@@ -15,3 +15,5 @@ Flag	Description:
 -l   List of targets (one per line)
 
 -o   Output directory
+
+--url  Target Url(one website)
