@@ -6,7 +6,7 @@
 
 ◾chmod +x FileUcrawler.py
 
-◾python3 FileUcrawler.py -l [website list]
+◾python3 FileUcrawler.py -l [website list.txt]
 
 Example:  python3 FileUcrawler.py -l websitelist.txt -o result.txt
 
